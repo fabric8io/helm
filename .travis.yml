@@ -15,7 +15,8 @@ install:
   - cd $HOME/gopath/src/github.com/
   - mkdir -p helm
   - cd helm
-  - mv $HOME/gopath/src/github.com/fabric8io/helm $HOME/gopath/src/github.com/helm/helm
+  - rm -rf helm
+  - mv $HOME/gopath/src/github.com/fabric8io/helm $HOME/gopath/src/github.com/helm
   - cd helm
   - pwd
   - wget "https://github.com/Masterminds/glide/releases/download/0.7.2/glide-0.7.2-linux-amd64.tar.gz"
