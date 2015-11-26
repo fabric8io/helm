@@ -2,7 +2,7 @@
   "package": {
     "name": "helm",
     "repo": "helm-ci",
-    "subject": "deis"
+    "subject": "fabric8io"
   },
   "version": {
     "name": "0.0.0"
