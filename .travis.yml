@@ -13,7 +13,7 @@ go:
   - 1.5.1
 install:
   - cd $HOME/gopath/src/github.com/
-  - mkdir helm
+  - mkdir -p helm
   - cd helm
   - mv $HOME/gopath/src/github.com/fabric8io/helm $HOME/gopath/src/github.com/helm/helm
   - cd helm
