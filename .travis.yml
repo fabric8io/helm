@@ -6,20 +6,24 @@ branches:
   only:
   - openshift-all
   - "/^v(?:[0-9]+\\.){2}[0-9]+.*$/"
-
 cache:
   directories:
   - "$GOPATH/src/github.com/helm/helm/vendor"
 go:
-- 1.5.1
+  - 1.5.1
 install:
-- wget "https://github.com/Masterminds/glide/releases/download/0.7.2/glide-0.7.2-linux-amd64.tar.gz"
-- mkdir -p $HOME/bin
-- tar -vxz -C $HOME/bin --strip=1 -f glide-0.7.2-linux-amd64.tar.gz
-- export PATH="$HOME/bin:$PATH" GLIDE_HOME="$HOME/.glide"
-- go get github.com/golang/lint/golint
-script: make bootstrap build test
+  - pwd
+  - mkdir ../helm
+  - cd ../helm
+  - mv ../fabric8io/helm .
+  - pwd
+  - wget "https://github.com/Masterminds/glide/releases/download/0.7.2/glide-0.7.2-linux-amd64.tar.gz"
+  - mkdir -p $HOME/bin
+  - tar -vxz -C $HOME/bin --strip=1 -f glide-0.7.2-linux-amd64.tar.gz
+  - export PATH="$HOME/bin:$PATH" GLIDE_HOME="$HOME/.glide"
+  - go get github.com/golang/lint/golint
 
+script: make bootstrap build test
 before_deploy: make dist prep-bintray-json
 
 deploy:
