@@ -9,6 +9,7 @@ import (
 	"github.com/helm/helm/manifest"
 	"k8s.io/kubernetes/pkg/api/v1"
 	oapi "github.com/openshift/origin/pkg/template/api/v1"
+	oauth "github.com/openshift/origin/pkg/oauth/api/v1"
 )
 
 // Chart represents a complete chart.
@@ -37,6 +38,8 @@ type Chart struct {
 	// 	https://github.com/kubernetes/kubernetes/pull/14918#issuecomment-153954995
 	//  https://github.com/kubernetes/kubernetes/issues/10408
 	Templates              []*oapi.Template
+
+	OAuthClients           []*oauth.OAuthClient
 
 	Manifests []*manifest.Manifest
 }
@@ -168,6 +171,13 @@ func SortManifests(chart *Chart, manifests []*manifest.Manifest) {
 			}
 			o.Annotations = setOriginFile(o.Annotations, m.Source)
 			chart.Namespaces = append(chart.Namespaces, o)
+		case "OAuthClient":
+			o, err := vo.OAuthClient()
+			if err != nil {
+				log.Warn("Failed conversion: %s", err)
+			}
+			o.Annotations = setOriginFile(o.Annotations, m.Source)
+			chart.OAuthClients = append(chart.OAuthClients, o)
 		}
 	}
 }
