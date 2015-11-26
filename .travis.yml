@@ -12,10 +12,11 @@ cache:
 go:
   - 1.5.1
 install:
-  - pwd
-  - mkdir ../helm
-  - cd ../helm
-  - mv ../fabric8io/helm .
+  - cd $HOME/gopath/src/github.com/
+  - mkdir helm
+  - cd helm
+  - mv $HOME/gopath/src/github.com/fabric8io/helm $HOME/gopath/src/github.com/helm/helm
+  - cd helm
   - pwd
   - wget "https://github.com/Masterminds/glide/releases/download/0.7.2/glide-0.7.2-linux-amd64.tar.gz"
   - mkdir -p $HOME/bin
