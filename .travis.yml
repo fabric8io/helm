@@ -1,37 +1,30 @@
 language: go
-
 env:
+  matrix:
   - GO15VENDOREXPERIMENT=1
-
 branches:
   only:
-    - openshift-all
-    - /^v(?:[0-9]+\.){2}[0-9]+.*$/
-
+  - openshift-all
+  - "/^v(?:[0-9]+\\.){2}[0-9]+.*$/"
 cache:
   directories:
-    - $GOPATH/src/github.com/helm/helm/vendor
-
+  - "$GOPATH/src/github.com/helm/helm/vendor"
 go:
-  - 1.5.1
-
+- 1.5.1
 install:
-  - wget "https://github.com/Masterminds/glide/releases/download/0.7.2/glide-0.7.2-linux-amd64.tar.gz"
-  - mkdir -p $HOME/bin
-  - tar -vxz -C $HOME/bin --strip=1 -f glide-0.7.2-linux-amd64.tar.gz
-  - export PATH="$HOME/bin:$PATH" GLIDE_HOME="$HOME/.glide"
-  - go get github.com/golang/lint/golint
-
+- wget "https://github.com/Masterminds/glide/releases/download/0.7.2/glide-0.7.2-linux-amd64.tar.gz"
+- mkdir -p $HOME/bin
+- tar -vxz -C $HOME/bin --strip=1 -f glide-0.7.2-linux-amd64.tar.gz
+- export PATH="$HOME/bin:$PATH" GLIDE_HOME="$HOME/.glide"
+- go get github.com/golang/lint/golint
 script: make bootstrap build test test-charts
-
 before_deploy: make bootstrap-dist dist prep-bintray-json
-
 deploy:
 - provider: bintray
   file: _scripts/ci/bintray-ci.json
   user: fabric8io
   key:
-    secure: "c7bWThGpO9vE/A1ePSW/kyhJPOVl6COsWK+199PVuQz1G3mB5xL0FUA21qGp25RAGyJW/iBBp6CQRCKXksnlicwgVk8cOyiYhy1tsxo06c6aAtuf8FBP+EIXtvqlH5QTskvkQzKfhUsYFVoXVr0VRIFcNYejBl/npWdvLy+sz90a8L3JuZ/RbMEYXgQ85SqLUR5OvEKI1C078i10RGcnQNcxOrcl71sB+1nDux3h0wXEzOKkHsmFd7CBNvgNnGx6ugV+YFj6TwfezE2LiWtGugbto1TY9PEGZsEg6I0eKvqXmoWTghd92QF22EEc81C8WJH56Ew/3vMnQlGGgUzhpy982gFSSLo73zb/6HwSC6LdBa6Jjg5L6xWiRteyX6dYFobGRrHytX6q6Q7lrM43Q9FwdIxlqKSyr7wZIOFg+uG3B/W/8Q6EXx7vnSJsUuO5P9QDpTQqAQakJ4gyq68WsPx0E3trLA3326Fum/GfnawiXJmtTHhdTvY3RGS0Pt6FWBBoaN2oHObaciMd77jq6auDCzO4wgx+LoBcekM3QOoEAVx/ASXfzxgZAvur7RK+opzPzHCR3sWpFloasNeSMXq2fJLhWo/DQWNxWisDmZ6JVgf9S15N5S896lpiND1JqgQDNJcbad5dpEhfthJzKDPneXOuqEna+fpfCZ/OPS0="
+    secure: RrpzcbCW8lVhrSrjNlW7wdmCLcpTrCp/q1XnD4JqoaVrHltN5ZPUKv4/yrGry4vJezgzldlFl5cdjUOoMFYD6NcfkhIP30u1c9RvsPuCewbHSsDuunj9iQ+UDjhl5oNxuuqeXsAOGvv4uQeaIaaXFb/tv70FLW8Gxoz9m1nM7Kx5FhswKlYsh7+5WbXaTqz6ZwHzpRvJs9SMq+IP9cE78bZMgAkv1arh5dExMec/6SOkNFfESzJy1YwPMwZ0wFLEM1LtgeuHhoVPjqCssY1B2OvYU+/tkBFzMFoiruvDtcVTSkBMiAQSBo+MnZf+Pm2jPwnby0kM1YLDboSU7lG9NjUXqxLJhZzUm4p8Jp8ROu//EtyW97XseZQ+Y4xFiNfA1lYxmwF8pP8Vxxqx/OJPPRSUqJlMCstyXiEpkcGavhRnRLyxLT+Q1aDMWlt+6FK1WLrdSNIsU2j2Ehhz1z1DGletpshrZ9JwndYZBahKQ4yFb4as4VjIWdQNCgTefawXjbC60rDjWynuPXx5Fex0Uu1TdXrYeCVQ5tiXaw4iob/qnaIwn9kkXKhELbNGCtY7HRbEdBsKLc2EYX16BT0/zo1dnVauPruALhA+miDHnlg1XBjtUS9GutVE9RENRrRF5W4uM3UJGuNRrzA96lrno08q1pYN8wD2yrS6DVy6vQg=
   on:
     all_branches: true
-    condition: ${TRAVIS_PULL_REQUEST} == false
+    condition: "${TRAVIS_PULL_REQUEST} == false"
