@@ -271,12 +271,14 @@ func uploadManifests(c *chart.Chart, namespace string, mode string, dryRun bool,
 func marshalAndKubeCtlCreate(o interface{}, ns string, kind string, metadata *v1.ObjectMeta, mode string, dry bool) error {
 	if mode != "create" {
 		// lets get the current ResourceVersion of the entity so we can use "apply"
-		mode = "apply"
-		resourceVersion, err :=  kubeCtlGetResourceVersion(ns, kind, metadata.Name)
-		if err != nil {
-			return err
+		name := metadata.Name
+		resourceVersion, _ :=  kubeCtlGetResourceVersion(ns, kind, name)
+		if resourceVersion != "" {
+			metadata.ResourceVersion = resourceVersion;
+			mode = "apply"
+		} else {
+			mode = "create"
 		}
-		metadata.ResourceVersion = resourceVersion;
 	}
 	var b bytes.Buffer
 	if err := codec.JSON.Encode(&b).One(o); err != nil {
@@ -288,12 +290,14 @@ func marshalAndKubeCtlCreate(o interface{}, ns string, kind string, metadata *v1
 func marshalAndOcCreate(o interface{}, ns string, kind string, metadata *v1.ObjectMeta, mode string, dry bool) error {
 	if mode != "create" {
 		// lets get the current ResourceVersion of the entity so we can use "apply"
-		mode = "apply"
-		resourceVersion, err :=  kubeCtlGetResourceVersion(ns, kind, metadata.Name)
-		if err != nil {
-			return err
+		name := metadata.Name
+		resourceVersion, _ :=  kubeCtlGetResourceVersion(ns, kind, name)
+		if resourceVersion != "" {
+			metadata.ResourceVersion = resourceVersion;
+			mode = "apply"
+		} else {
+			mode = "create"
 		}
-		metadata.ResourceVersion = resourceVersion;
 	}
 	var b bytes.Buffer
 	if err := codec.JSON.Encode(&b).One(o); err != nil {
@@ -372,9 +376,12 @@ func commandCreate(data []byte, ns string, mode string, dryRun bool, cmd string)
 }
 
 func kubeCtlGetResourceVersion(ns string, kind string, name string) (string, error) {
-	b, err := kubeCtlGetJson(ns, kind, name)
+	b, err := kubeCtlGetJSON(ns, kind, name)
 	if err != nil {
 		return "", err
+	}
+	if len(b) == 0 {
+		return "", nil
 	}
 	kubeCodec := runtime.CodecFor(api.Scheme, defaultAPIVersion)
 	o, err := kubeCodec.Decode(b)
@@ -388,7 +395,7 @@ func kubeCtlGetResourceVersion(ns string, kind string, name string) (string, err
 	return objectMeta.ResourceVersion, nil
 }
 
-func kubeCtlGetJson(ns string, kind string, name string) ([]byte, error) {
+func kubeCtlGetJSON(ns string, kind string, name string) ([]byte, error) {
 	cmd := "kubectl"
 	a := []string{}
 	if ns != "" {
