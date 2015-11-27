@@ -44,8 +44,8 @@ import (
 // 	- Services
 // 	- Pods
 // 	- ReplicationControllers
-func Install(chartName, home, namespace string, force bool, dryRun bool, valueFlag string, paramFolder string) {
-
+func Install(chartName, home, namespace string, force bool, dryRun bool, valueFlag string, paramFolder string, printImportFolders bool, writeGeneratedKeys bool, generateSecretsData bool) {
+	secretFlags := &secretSettings{PrintImportFolders: printImportFolders, WriteGeneratedKeys: writeGeneratedKeys, GenerateSecretsData: generateSecretsData}
 	ochart := chartName
 	r := mustConfig(home).Repos
 	table, chartName := r.RepoChart(chartName)
@@ -84,7 +84,7 @@ func Install(chartName, home, namespace string, force bool, dryRun bool, valueFl
 		msg = "Performing a dry run of `kubectl create -f` ..."
 	}
 	log.Info(msg)
-	if err := uploadManifests(c, namespace, dryRun); err != nil {
+	if err := uploadManifests(c, namespace, dryRun, secretFlags); err != nil {
 		log.Die("Failed to upload manifests: %s", err)
 	}
 	log.Info("Done")
@@ -216,7 +216,7 @@ func processTemplates(c *chart.Chart, valueFlag string, paramFolder string) (*ch
 }
 
 // uploadManifests sends manifests to Kubectl in a particular order.
-func uploadManifests(c *chart.Chart, namespace string, dryRun bool) error {
+func uploadManifests(c *chart.Chart, namespace string, dryRun bool, secretFlags *secretSettings) error {
 	// The ordering is significant.
 	// TODO: Right now, we force version v1. We could probably make this more
 	// flexible if there is a use case.
@@ -256,6 +256,9 @@ func uploadManifests(c *chart.Chart, namespace string, dryRun bool) error {
 		}
 	}
 	for _, o := range c.ReplicationControllers {
+		if err := createSecretsFromAnnotations(o, namespace, dryRun, secretFlags); err != nil {
+			return err
+		}
 		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
 			return err
 		}
