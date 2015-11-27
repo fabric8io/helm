@@ -18,6 +18,7 @@ import (
 	"github.com/helm/helm/parameters"
 
 	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/runtime"
 	utilerr "k8s.io/kubernetes/pkg/util/errors"
@@ -44,7 +45,7 @@ import (
 // 	- Services
 // 	- Pods
 // 	- ReplicationControllers
-func Install(chartName, home, namespace string, force bool, dryRun bool, valueFlag string, paramFolder string, printImportFolders bool, writeGeneratedKeys bool, generateSecretsData bool) {
+func Install(chartName, home, namespace string, mode string, force bool, dryRun bool, valueFlag string, paramFolder string, printImportFolders bool, writeGeneratedKeys bool, generateSecretsData bool) {
 	secretFlags := &secretSettings{PrintImportFolders: printImportFolders, WriteGeneratedKeys: writeGeneratedKeys, GenerateSecretsData: generateSecretsData}
 	ochart := chartName
 	r := mustConfig(home).Repos
@@ -84,7 +85,7 @@ func Install(chartName, home, namespace string, force bool, dryRun bool, valueFl
 		msg = "Performing a dry run of `kubectl create -f` ..."
 	}
 	log.Info(msg)
-	if err := uploadManifests(c, namespace, dryRun, secretFlags); err != nil {
+	if err := uploadManifests(c, namespace, mode, dryRun, secretFlags); err != nil {
 		log.Die("Failed to upload manifests: %s", err)
 	}
 	log.Info("Done")
@@ -216,70 +217,89 @@ func processTemplates(c *chart.Chart, valueFlag string, paramFolder string) (*ch
 }
 
 // uploadManifests sends manifests to Kubectl in a particular order.
-func uploadManifests(c *chart.Chart, namespace string, dryRun bool, secretFlags *secretSettings) error {
+func uploadManifests(c *chart.Chart, namespace string, mode string, dryRun bool, secretFlags *secretSettings) error {
 	// The ordering is significant.
 	// TODO: Right now, we force version v1. We could probably make this more
 	// flexible if there is a use case.
 	for _, o := range c.Namespaces {
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.Secrets {
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.PersistentVolumes {
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.ServiceAccounts {
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.OAuthClients {
-		if err := marshalAndOcCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndOcCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.Services {
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.Pods {
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	for _, o := range c.ReplicationControllers {
-		if err := createSecretsFromAnnotations(o, namespace, dryRun, secretFlags); err != nil {
+		if err := createSecretsFromAnnotations(o, namespace, mode, dryRun, secretFlags); err != nil {
 			return err
 		}
-		if err := marshalAndKubeCtlCreate(o, namespace, dryRun); err != nil {
+		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func marshalAndKubeCtlCreate(o interface{}, ns string, dry bool) error {
+
+func marshalAndKubeCtlCreate(o interface{}, ns string, kind string, metadata *v1.ObjectMeta, mode string, dry bool) error {
+	if mode != "create" {
+		// lets get the current ResourceVersion of the entity so we can use "apply"
+		mode = "apply"
+		resourceVersion, err :=  kubeCtlGetResourceVersion(ns, kind, metadata.Name)
+		if err != nil {
+			return err
+		}
+		metadata.ResourceVersion = resourceVersion;
+	}
 	var b bytes.Buffer
 	if err := codec.JSON.Encode(&b).One(o); err != nil {
 		return err
 	}
-	return kubectlCreate(b.Bytes(), ns, dry)
+	return kubectlCreate(b.Bytes(), ns, mode, dry)
 }
 
-func marshalAndOcCreate(o interface{}, ns string, dry bool) error {
+func marshalAndOcCreate(o interface{}, ns string, kind string, metadata *v1.ObjectMeta, mode string, dry bool) error {
+	if mode != "create" {
+		// lets get the current ResourceVersion of the entity so we can use "apply"
+		mode = "apply"
+		resourceVersion, err :=  kubeCtlGetResourceVersion(ns, kind, metadata.Name)
+		if err != nil {
+			return err
+		}
+		metadata.ResourceVersion = resourceVersion;
+	}
 	var b bytes.Buffer
 	if err := codec.JSON.Encode(&b).One(o); err != nil {
 		return err
 	}
-	err := ocCreate(b.Bytes(), ns, dry)
+	err := ocCreate(b.Bytes(), ns, mode, dry)
 	if err != nil {
 		log.Warn("Failed to process OpenShift extension. Might not be on OpenShift? %s", err)
 	}
@@ -303,20 +323,20 @@ func chartFetched(chartName, home string) bool {
 //
 // If dryRun is set to true, then we just output the command that was
 // going to be run to os.Stdout and return nil.
-func kubectlCreate(data []byte, ns string, dryRun bool) error {
-	return commandCreate(data, ns, dryRun, "kubectl")
+func kubectlCreate(data []byte, ns string, mode string, dryRun bool) error {
+	return commandCreate(data, ns, mode, dryRun, "kubectl")
 }
 
 // ocCreate calls `oc create` and sends the data via Stdin to OpenShift.
 //
 // If dryRun is set to true, then we just output the command that was
 // going to be run to os.Stdout and return nil.
-func ocCreate(data []byte, ns string, dryRun bool) error {
-	return commandCreate(data, ns, dryRun, "oc")
+func ocCreate(data []byte, ns string, mode string, dryRun bool) error {
+	return commandCreate(data, ns, mode, dryRun, "oc")
 }
 
-func commandCreate(data []byte, ns string, dryRun bool, cmd string) error {
-	a := []string{"create", "-f", "-"}
+func commandCreate(data []byte, ns string, mode string, dryRun bool, cmd string) error {
+	a := []string{mode, "-f", "-"}
 
 	if ns != "" {
 		a = append([]string{"--namespace=" + ns}, a...)
@@ -349,4 +369,27 @@ func commandCreate(data []byte, ns string, dryRun bool, cmd string) error {
 	in.Close()
 
 	return c.Wait()
+}
+
+func kubeCtlGetResourceVersion(ns string, kind string, name string) (string, error) {
+	b, err := kubeCtlGetJson(ns, kind, name)
+	if err != nil {
+		return "", err
+	}
+	kubeCodec := runtime.CodecFor(api.Scheme, defaultAPIVersion)
+	o, err := kubeCodec.Decode(b)
+	if err != nil {
+		return "", err
+	}
+	objectMeta, err := api.ObjectMetaFor(o)
+	if err != nil {
+		return "", err
+	}
+	return objectMeta.ResourceVersion, nil
+}
+
+func kubeCtlGetJson(ns string, kind string, name string) ([]byte, error) {
+	cmd := "kubectl"
+	a := []string{"--namespace=" + ns, "get", strings.ToLower(kind), name, "-ojson"}
+	return exec.Command(cmd, a...).Output()
 }
