@@ -8,7 +8,13 @@ GO_PACKAGES := action chart config dependency log manifest parameters release pl
 MAIN_GO := helm.go
 HELM_BIN := $(BIN_DIR)/helm
 
-VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null)+$(shell git rev-parse --short HEAD)
+VERSION_PREFIX := $(shell git describe --tags --abbrev=0 2>/dev/null)
+
+ifndef VERSION_PREFIX
+  VERSION_PREFIX := "v0.1.0"
+endif
+
+VERSION := ${VERSION_PREFIX}+$(shell git rev-parse --short HEAD)
 
 export GO15VENDOREXPERIMENT=1
 
