@@ -18,15 +18,15 @@ import (
 	"github.com/helm/helm/parameters"
 
 	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/api/errors"
+	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/runtime"
 	utilerr "k8s.io/kubernetes/pkg/util/errors"
 
 	"github.com/openshift/origin/pkg/template"
-	"github.com/openshift/origin/pkg/template/generator"
 	tapi "github.com/openshift/origin/pkg/template/api"
 	templatevalidation "github.com/openshift/origin/pkg/template/api/validation"
+	"github.com/openshift/origin/pkg/template/generator"
 )
 
 // Install loads a chart into Kubernetes.
@@ -142,7 +142,7 @@ func processTemplates(c *chart.Chart, valueFlag string, paramFolder string) (*ch
 					log.Die("invalid parameter assignment in %q: %q\n", t.Name, keypair)
 					continue
 				}
-				customized = true;
+				customized = true
 				customParams.Values[p[0]] = p[1]
 			}
 		}
@@ -266,14 +266,13 @@ func uploadManifests(c *chart.Chart, namespace string, mode string, dryRun bool,
 	return nil
 }
 
-
 func marshalAndKubeCtlCreate(o interface{}, ns string, kind string, metadata *v1.ObjectMeta, mode string, dry bool) error {
 	if mode != "create" {
 		// lets get the current ResourceVersion of the entity so we can use "apply"
 		name := metadata.Name
-		resourceVersion, _ :=  kubeCtlGetResourceVersion(ns, kind, name)
+		resourceVersion, _ := kubeCtlGetResourceVersion(ns, kind, name)
 		if resourceVersion != "" {
-			metadata.ResourceVersion = resourceVersion;
+			metadata.ResourceVersion = resourceVersion
 			mode = "apply"
 		} else {
 			mode = "create"
@@ -293,9 +292,9 @@ func marshalAndOcCreate(o interface{}, ns string, kind string, metadata *v1.Obje
 	if mode != "create" {
 		// lets get the current ResourceVersion of the entity so we can use "apply"
 		name := metadata.Name
-		resourceVersion, _ :=  kubeCtlGetResourceVersion(ns, kind, name)
+		resourceVersion, _ := kubeCtlGetResourceVersion(ns, kind, name)
 		if resourceVersion != "" {
-			metadata.ResourceVersion = resourceVersion;
+			metadata.ResourceVersion = resourceVersion
 			//mode = "apply"
 			mode = "replace"
 		} else {
