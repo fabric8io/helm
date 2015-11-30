@@ -27,10 +27,6 @@ import (
 	"github.com/openshift/origin/pkg/template/generator"
 	tapi "github.com/openshift/origin/pkg/template/api"
 	templatevalidation "github.com/openshift/origin/pkg/template/api/validation"
-
-	// lets force the initialisation of the OAuthClient scheme
-	_ "github.com/openshift/origin/pkg/oauth/api/v1"
-
 )
 
 // Install loads a chart into Kubernetes.
@@ -250,6 +246,9 @@ func uploadManifests(c *chart.Chart, namespace string, mode string, dryRun bool,
 		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
 			return err
 		}
+		if err := createOpenShiftRouteIfRequired(o, namespace, mode, dryRun); err != nil {
+			return err
+		}
 	}
 	for _, o := range c.Pods {
 		if err := marshalAndKubeCtlCreate(o, namespace, o.Kind, &o.ObjectMeta, mode, dryRun); err != nil {
@@ -288,13 +287,17 @@ func marshalAndKubeCtlCreate(o interface{}, ns string, kind string, metadata *v1
 }
 
 func marshalAndOcCreate(o interface{}, ns string, kind string, metadata *v1.ObjectMeta, mode string, dry bool) error {
+	if !isOpenShift() {
+		return nil
+	}
 	if mode != "create" {
 		// lets get the current ResourceVersion of the entity so we can use "apply"
 		name := metadata.Name
 		resourceVersion, _ :=  kubeCtlGetResourceVersion(ns, kind, name)
 		if resourceVersion != "" {
 			metadata.ResourceVersion = resourceVersion;
-			mode = "apply"
+			//mode = "apply"
+			mode = "replace"
 		} else {
 			mode = "create"
 		}
@@ -402,6 +405,5 @@ func kubeCtlGetJSON(ns string, kind string, name string) ([]byte, error) {
 		a = append([]string{"--namespace=" + ns}, a...)
 	}
 	a = append([]string{"get", strings.ToLower(kind), name, "-ojson"}, a...)
-	log.Info("About to invoke command %s %s", cmd, strings.Join(a, " "))
 	return exec.Command(cmd, a...).Output()
 }
