@@ -11,7 +11,7 @@ HELM_BIN := $(BIN_DIR)/helm
 VERSION_PREFIX := $(shell git describe --tags --abbrev=0 2>/dev/null)
 
 ifndef VERSION_PREFIX
-  VERSION_PREFIX := "v0.1.0"
+  VERSION_PREFIX := v0.1.0
 endif
 
 VERSION := ${VERSION_PREFIX}+$(shell git rev-parse --short HEAD)
